@@ -46,6 +46,11 @@ export async function createTestApp(options?: {
   const app = moduleRef.createNestApplication();
   configureApp(app);
   await app.init();
+  // 서버를 명시적으로 listen 상태로 만든다 (0 = OS가 빈 포트 자동 할당).
+  // supertest는 server.address()가 null이면 스스로 listen을 시도하고 응답 후
+  // 서버를 닫기까지 하므로, 병렬 요청 시 한 Test가 공유 서버를 닫아 나머지
+  // in-flight 요청이 ECONNRESET을 받는 하네스 레이스가 발생할 수 있다.
+  await app.listen(0);
 
   if (options?.stopScheduler !== false) {
     const registry = app.get(SchedulerRegistry);
