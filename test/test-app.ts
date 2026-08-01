@@ -8,6 +8,7 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app-setup';
 import { DB_FILE_TOKEN } from '../src/jobs/jobs.repository';
 import { LOG_FILE_TOKEN } from '../src/logging/file-logger.service';
+import { JOB_HANDLER, JobHandler } from '../src/scheduler/job-handler';
 
 export interface TestApp {
   app: INestApplication;
@@ -24,19 +25,23 @@ export interface TestApp {
  */
 export async function createTestApp(options?: {
   stopScheduler?: boolean;
+  handler?: JobHandler;
 }): Promise<TestApp> {
   const tempDir = mkdtempSync(join(tmpdir(), 'jobs-e2e-'));
   const dbFile = join(tempDir, 'jobs.json');
   const logFile = join(tempDir, 'logs.txt');
 
-  const moduleRef = await Test.createTestingModule({
+  let builder = Test.createTestingModule({
     imports: [AppModule],
   })
     .overrideProvider(DB_FILE_TOKEN)
     .useValue(dbFile)
     .overrideProvider(LOG_FILE_TOKEN)
-    .useValue(logFile)
-    .compile();
+    .useValue(logFile);
+  if (options?.handler) {
+    builder = builder.overrideProvider(JOB_HANDLER).useValue(options.handler);
+  }
+  const moduleRef = await builder.compile();
 
   const app = moduleRef.createNestApplication();
   configureApp(app);
