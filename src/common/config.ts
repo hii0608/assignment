@@ -14,6 +14,8 @@ export const JOB_MAX_ATTEMPTS = 3;
 
 export const STUB_HANDLER_MIN_DELAY_MS = 1_000;
 export const STUB_HANDLER_MAX_DELAY_MS = 3_000;
+/** 스텁의 실패 모사 확률. 실제 구동에서도 재시도·failed 경로가 관찰되게 한다. */
+export const STUB_HANDLER_FAILURE_RATE = 0.2;
 
 export const PAGINATION_DEFAULT_LIMIT = 20;
 export const PAGINATION_MAX_LIMIT = 100;
