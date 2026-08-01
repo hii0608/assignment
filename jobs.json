@@ -1,0 +1,64 @@
+{
+    "jobs": [
+        {
+            "id": "3d9c1a72-8f4e-4b6a-9e15-c2a7d80f41b9",
+            "title": "주간 데이터 백업",
+            "description": "매주 금요일 실행되는 정기 백업 작업",
+            "status": "pending",
+            "attempts": 0,
+            "maxAttempts": 3,
+            "failReason": null,
+            "createdAt": "2026-08-01T09:00:00.000Z",
+            "updatedAt": "2026-08-01T09:00:00.000Z",
+            "processedAt": null
+        },
+        {
+            "id": "b47e2f91-3c5d-4a08-8d67-1f9e0b3c62a4",
+            "title": "월간 리포트 생성",
+            "description": "7월 이용 통계 리포트",
+            "status": "processing",
+            "attempts": 0,
+            "maxAttempts": 3,
+            "failReason": null,
+            "createdAt": "2026-08-01T08:30:00.000Z",
+            "updatedAt": "2026-08-01T08:30:30.000Z",
+            "processedAt": null
+        },
+        {
+            "id": "7a1f5e38-6b2c-4d94-a05e-8c3b9d47f012",
+            "title": "이미지 썸네일 변환",
+            "description": "",
+            "status": "completed",
+            "attempts": 0,
+            "maxAttempts": 3,
+            "failReason": null,
+            "createdAt": "2026-08-01T08:00:00.000Z",
+            "updatedAt": "2026-08-01T08:00:32.000Z",
+            "processedAt": "2026-08-01T08:00:32.000Z"
+        },
+        {
+            "id": "e58d0c26-9a7f-4321-b8e4-5d16f2a90c73",
+            "title": "외부 API 동기화",
+            "description": "재고 시스템과 상품 정보 동기화",
+            "status": "failed",
+            "attempts": 3,
+            "maxAttempts": 3,
+            "failReason": "처리 실패 모사 (stub): 외부 API 동기화",
+            "createdAt": "2026-08-01T07:50:00.000Z",
+            "updatedAt": "2026-08-01T07:52:10.000Z",
+            "processedAt": "2026-08-01T07:52:10.000Z"
+        },
+        {
+            "id": "c92b6d15-0e83-4f7a-9b28-a64c1e5d80f6",
+            "title": "임시 파일 정리",
+            "description": "생성 직후 불필요해져 취소된 작업",
+            "status": "cancelled",
+            "attempts": 0,
+            "maxAttempts": 3,
+            "failReason": null,
+            "createdAt": "2026-08-01T07:40:00.000Z",
+            "updatedAt": "2026-08-01T07:45:00.000Z",
+            "processedAt": null
+        }
+    ]
+}

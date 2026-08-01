@@ -17,9 +17,14 @@ npm test                 # 유닛 테스트
 npm run test:e2e         # e2e 테스트
 ```
 
-<!-- TODO(구현 후): Node 버전 명시, 실제 스크립트명과 일치 확인 -->
+- Node.js 20 이상 권장 (Node v24.14.0 + npm 11에서 실측·검증)
+- 별도 환경 변수 없이 실행. 기본 포트 3000 (`PORT` 환경 변수로 변경 가능)
+- 저장소에 포함된 `jobs.json` 시드에 각 상태별 job이 1건씩 들어 있다.
+  서버 기동 30초 후 첫 폴링에서 pending 시드가 처리되는 것을 바로 관찰할 수 있다.
 
 ## API 사용법
+
+아래 응답은 전부 시드 데이터 기준 실측 값이다.
 
 ### 작업 생성
 
@@ -29,7 +34,22 @@ curl -X POST http://localhost:3000/jobs \
   -d '{"title": "데이터 백업", "description": "주간 백업 작업"}'
 ```
 
-<!-- TODO(구현 후): 실제 응답 붙여넣기 (201, 전체 필드 포함) -->
+201 Created:
+
+```json
+{
+  "id": "26f03fdc-f760-49d5-b72f-cda46e88b649",
+  "title": "데이터 백업",
+  "description": "주간 백업 작업",
+  "status": "pending",
+  "attempts": 0,
+  "maxAttempts": 3,
+  "failReason": null,
+  "createdAt": "2026-08-01T11:05:19.701Z",
+  "updatedAt": "2026-08-01T11:05:19.701Z",
+  "processedAt": null
+}
+```
 
 ### 목록 조회 / 검색 / 단건 조회 / 수정
 
@@ -42,7 +62,97 @@ curl -X PATCH http://localhost:3000/jobs/<id> \
   -d '{"status": "cancelled"}'
 ```
 
-<!-- TODO(구현 후): 각 엔드포인트 실제 요청/응답 예시, 에러 응답 예시(400/404/409) -->
+목록/검색 응답은 `{ data, meta }` envelope (200, `?page=1&limit=2` 실측):
+
+```json
+{
+  "data": [
+    {
+      "id": "26f03fdc-f760-49d5-b72f-cda46e88b649",
+      "title": "데이터 백업",
+      "description": "주간 백업 작업",
+      "status": "pending",
+      "attempts": 0,
+      "maxAttempts": 3,
+      "failReason": null,
+      "createdAt": "2026-08-01T11:05:19.701Z",
+      "updatedAt": "2026-08-01T11:05:19.701Z",
+      "processedAt": null
+    },
+    {
+      "id": "3d9c1a72-8f4e-4b6a-9e15-c2a7d80f41b9",
+      "title": "주간 데이터 백업",
+      "description": "매주 금요일 실행되는 정기 백업 작업",
+      "status": "pending",
+      "attempts": 0,
+      "maxAttempts": 3,
+      "failReason": null,
+      "createdAt": "2026-08-01T09:00:00.000Z",
+      "updatedAt": "2026-08-01T09:00:00.000Z",
+      "processedAt": null
+    }
+  ],
+  "meta": { "total": 6, "page": 1, "limit": 2 }
+}
+```
+
+수정 성공 시 갱신된 job을 그대로 반환한다 (200, `{"status": "cancelled"}` 실측):
+
+```json
+{
+  "id": "26f03fdc-f760-49d5-b72f-cda46e88b649",
+  "title": "데이터 백업",
+  "description": "주간 백업 작업",
+  "status": "cancelled",
+  "attempts": 0,
+  "maxAttempts": 3,
+  "failReason": null,
+  "createdAt": "2026-08-01T11:05:19.701Z",
+  "updatedAt": "2026-08-01T11:05:19.996Z",
+  "processedAt": null
+}
+```
+
+### 에러 응답 (전역 통일 구조, 실측)
+
+400 — 요청 자체가 잘못됨 (검증 실패, 모르는 필드):
+
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": [
+    "title must be longer than or equal to 1 characters",
+    "title must be a string"
+  ],
+  "timestamp": "2026-08-01T11:05:20.050Z",
+  "path": "/jobs"
+}
+```
+
+404 — 리소스 없음:
+
+```json
+{
+  "statusCode": 404,
+  "error": "Not Found",
+  "message": "Job을 찾을 수 없음: 00000000-0000-4000-8000-000000000000",
+  "timestamp": "2026-08-01T11:05:20.102Z",
+  "path": "/jobs/00000000-0000-4000-8000-000000000000"
+}
+```
+
+409 — 요청은 유효하나 현재 상태와 충돌 (completed 시드에 `{"status": "pending"}` 시도):
+
+```json
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "허용되지 않는 상태 전이: completed → pending",
+  "timestamp": "2026-08-01T11:05:20.155Z",
+  "path": "/jobs/7a1f5e38-6b2c-4d94-a05e-8c3b9d47f012"
+}
+```
 
 ### 상태 모델
 
@@ -82,13 +192,22 @@ claiming의 이중 방어를 안전망으로 둔다. 처리 핸들러는 인터�
 
 ## 주요 트레이드오프 기록
 
-<!-- TODO(구현 후 실제 경험 반영). 설계 단계에서의 기록:
-- 로그에 title 포함 여부 — 이력 재구성 편의 vs 유출 위험. JSON Lines + 비민감 전제
-  명시로 절충 (ARCHITECTURE.md §9)
-- failed 상태에서 내용 수정 허용 — 감사 추적 우려를 로그 계층의 불변 이력이 해소
-- attempts 리셋 vs totalAttempts 누적 — 현재 요구 기준 리셋만 채택 (YAGNI)
-- (구현 중 되돌린 결정이 생기면 여기 추가)
--->
+설계 단계 기록:
+
+- **로그에 title 포함 여부** — 이력 재구성 편의 vs 유출 위험. JSON Lines + 비민감
+  전제 명시로 절충 (ARCHITECTURE.md §9)
+- **failed 상태에서 내용 수정 허용** — 감사 추적 우려를 로그 계층의 불변 이력이 해소
+- **attempts 리셋 vs totalAttempts 누적** — 현재 요구 기준 리셋만 채택 (YAGNI)
+
+구현 중 내린 결정 (상세 근거는 ARCHITECTURE.md §9):
+
+- **같은 상태로의 PATCH도 409** — "전이 표에 없는 전이는 전부 409" 계약을 엄격
+  적용. no-op 허용(멱등)은 표 밖 예외를 만들어 계약의 일관성을 해친다고 판단
+- **PATCH 검증을 Repository의 mutator 콜백 안에서 실행** — Service가 읽고 검증한
+  뒤 따로 쓰면 그 사이에 스케줄러 claiming이 끼어드는 check-then-act 레이스가
+  생긴다. 검증과 쓰기를 같은 임계 구역에 묶어 구조적으로 차단
+- **자동 재시도 복귀 시 failReason 미기록** — 상태 파일은 최종 확정 사유만 갖고
+  (failed에서만 기록), 시도별 실패 사유 이력은 로그 계층(logs.txt)이 담당
 
 ## 로드맵
 
