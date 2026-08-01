@@ -209,6 +209,18 @@ claiming의 이중 방어를 안전망으로 둔다. 처리 핸들러는 인터�
 - **자동 재시도 복귀 시 failReason 미기록** — 상태 파일은 최종 확정 사유만 갖고
   (failed에서만 기록), 시도별 실패 사유 이력은 로그 계층(logs.txt)이 담당
 
+구현 중 발견·수정한 문제:
+
+- **동시성 e2e가 환경(Node 버전, 머신 속도)에 따라 flaky** — Node v22 환경에서
+  병렬 POST 20건 테스트가 간헐적으로 ECONNRESET으로 실패했다. 원인은 앱의
+  뮤텍스가 아니라 **테스트 하네스의 listen 레이스**: 테스트 앱이 `app.init()`만
+  하고 listen하지 않으면 supertest가 요청마다 스스로 `listen`을 시도하고 응답 후
+  서버를 닫기까지 하는데, 병렬 요청에서는 한 Test가 공유 서버를 닫아 나머지
+  in-flight 요청이 리셋된다. 하네스에서 `await app.listen(0)`으로 명시적으로
+  listen시켜(0 = OS가 빈 포트 할당, 충돌 없음) supertest의 자체 listen 경로
+  자체를 제거하는 것으로 결정적으로 수정했다. 앱 결함과 하네스 결함을 구분해내는
+  것이 동시성 테스트 신뢰성의 전제라는 교훈을 남긴 사례.
+
 ## 로드맵
 
 건당 처리 장기화 시 cooperative cancellation(cancelRequested 플래그), 읽기 트래픽
