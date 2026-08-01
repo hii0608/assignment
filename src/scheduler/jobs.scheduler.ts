@@ -1,5 +1,6 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
+import { FileLoggerService } from '../logging/file-logger.service';
 import {
   SCHEDULER_BATCH_SIZE,
   SCHEDULER_POLL_INTERVAL_MS,
@@ -19,21 +20,22 @@ import type { JobHandler } from './job-handler';
  */
 @Injectable()
 export class JobsScheduler {
-  private readonly logger = new Logger(JobsScheduler.name);
   private isRunning = false;
 
   constructor(
     private readonly repository: JobsRepository,
     @Inject(JOB_HANDLER) private readonly handler: JobHandler,
+    private readonly fileLogger: FileLoggerService,
   ) {}
 
   @Interval(SCHEDULER_POLL_INTERVAL_MS)
   async tick(): Promise<void> {
     if (this.isRunning) {
       // 정상 상황에서는 도달하지 않는 안전망 — 도달 자체가 이상 신호이므로 기록
-      this.logger.warn(
-        JSON.stringify({ event: 'scheduler.skip', reason: 'previous cycle still running' }),
-      );
+      this.fileLogger.write({
+        event: 'scheduler.skip',
+        reason: 'previous cycle still running',
+      });
       return;
     }
     this.isRunning = true;
@@ -42,9 +44,10 @@ export class JobsScheduler {
       const claimed = await this.repository.claimPendingBatch(
         SCHEDULER_BATCH_SIZE,
       );
-      this.logger.log(
-        JSON.stringify({ event: 'scheduler.cycle.start', claimed: claimed.length }),
-      );
+      this.fileLogger.write({
+        event: 'scheduler.cycle.start',
+        claimed: claimed.length,
+      });
       let completed = 0;
       let retried = 0;
       let failed = 0;
@@ -54,16 +57,14 @@ export class JobsScheduler {
         else if (result === 'retried') retried += 1;
         else failed += 1;
       }
-      this.logger.log(
-        JSON.stringify({
-          event: 'scheduler.cycle.summary',
-          claimed: claimed.length,
-          completed,
-          retried,
-          failed,
-          durationMs: Date.now() - startedAt,
-        }),
-      );
+      this.fileLogger.write({
+        event: 'scheduler.cycle.summary',
+        claimed: claimed.length,
+        completed,
+        retried,
+        failed,
+        durationMs: Date.now() - startedAt,
+      });
     } finally {
       this.isRunning = false;
     }
@@ -125,15 +126,13 @@ export class JobsScheduler {
     attempts: number,
     failReason: string | null,
   ): void {
-    this.logger.log(
-      JSON.stringify({
-        event: 'scheduler.job.result',
-        jobId: job.id,
-        title: job.title,
-        result,
-        attempts,
-        failReason,
-      }),
-    );
+    this.fileLogger.write({
+      event: 'scheduler.job.result',
+      jobId: job.id,
+      title: job.title,
+      result,
+      attempts,
+      failReason,
+    });
   }
 }
