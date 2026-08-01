@@ -38,7 +38,8 @@ export class FileLoggerService implements LoggerService, OnModuleDestroy {
     this.write({ level: 'warn', context, message });
   }
 
-  onModuleDestroy(): void {
-    this.stream.end();
+  /** 종료 시 버퍼를 flush — 테스트가 앱 close 직후 파일을 읽어도 결정적이다. */
+  async onModuleDestroy(): Promise<void> {
+    await new Promise<void>((resolve) => this.stream.end(() => resolve()));
   }
 }
