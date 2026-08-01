@@ -1,0 +1,22 @@
+# dependencies & build
+node_modules/
+dist/
+coverage/
+
+# runtime artifacts (jobs.json 시드는 커밋 대상이므로 제외하지 않는다)
+logs.txt
+
+# e2e 테스트용 임시 데이터 파일
+*.test.json
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# env
+.env
+.env.*
+
+# claude local settings
+.claude/
