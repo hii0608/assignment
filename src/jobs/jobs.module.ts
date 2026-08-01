@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { DB_FILE_PATH } from '../common/config';
+import { JobsController } from './jobs.controller';
 import { DB_FILE_TOKEN, JobsRepository } from './jobs.repository';
 import { JobsService } from './jobs.service';
 
 @Module({
+  controllers: [JobsController],
   providers: [
     JobsRepository,
     JobsService,
