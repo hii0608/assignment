@@ -26,7 +26,8 @@ npm run test:e2e         # e2e 테스트
 
 아래 응답은 전부 시드 데이터 기준 실측 값이다.
 
-### 작업 생성
+<details>
+<summary><strong>작업 생성</strong></summary>
 
 ```bash
 curl -X POST http://localhost:3000/jobs \
@@ -51,7 +52,10 @@ curl -X POST http://localhost:3000/jobs \
 }
 ```
 
-### 목록 조회 / 검색 / 단건 조회 / 수정
+</details>
+
+<details>
+<summary><strong>목록 조회 / 검색 / 단건 조회 / 수정</strong></summary>
 
 ```bash
 curl "http://localhost:3000/jobs?page=1&limit=20"
@@ -113,7 +117,10 @@ curl -X PATCH http://localhost:3000/jobs/<id> \
 }
 ```
 
-### 에러 응답 (전역 통일 구조, 실측)
+</details>
+
+<details>
+<summary><strong>에러 응답 (전역 통일 구조, 실측)</strong></summary>
 
 400 — 요청 자체가 잘못됨 (검증 실패, 모르는 필드):
 
@@ -154,12 +161,17 @@ curl -X PATCH http://localhost:3000/jobs/<id> \
 }
 ```
 
-### 상태 모델
+</details>
+
+<details>
+<summary><strong>상태 모델</strong></summary>
 
 `pending → processing → completed | failed(재시도 3회 소진 시)`.
 사용자가 일으킬 수 있는 전이는 `pending → cancelled`(실행 전 취소)와
 `failed → pending`(수동 재시도)뿐이다. 그 외 전이 요청은 409로 거부된다.
 전체 전이 표와 근거는 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §4.
+
+</details>
 
 ## 설계 요약
 
