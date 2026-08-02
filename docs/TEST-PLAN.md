@@ -71,6 +71,8 @@
 - [ ] 오래된 순으로 집어감 (FIFO)
 - [ ] overlap 가드: isRunning=true 상태에서 주기 진입 시 스킵 + 스킵 로그
 - [ ] 처리 결과가 logs.txt에 기록됨 (jobId, title, 결과)
+- [ ] 부팅 시 크래시 복구 (startup sweep): processing 고아 job이 있는 상태로
+      앱 부팅 → pending 복구 (attempts 불변) + scheduler.recovery 로그 기록
 
 ## 4. 동시성 테스트 (최대 리스크 영역 — 통합 테스트)
 
