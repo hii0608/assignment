@@ -131,7 +131,7 @@ export class JobsRepository {
   /**
    * 부팅 시 크래시 복구 (startup sweep, ARCHITECTURE.md §7): processing인
    * job 전부를 pending으로 되돌린다. 단일 프로세스 전제에서 부팅 시점의
-   * processing은 전부 이전 프로세스가 남긴 고아다. attempts는 올리지 않는다 —
+   * processing은 전부 이전 프로세스가 남긴 고아이다. attempts는 올리지 않는다 —
    * 핸들러가 실패한 것이 아니라 완료되지 못한 것이므로.
    * 복구된 job의 id 목록을 반환한다 (건수는 length).
    */
