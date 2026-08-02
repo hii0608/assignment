@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { FileLoggerService } from '../logging/file-logger.service';
 import {
@@ -19,7 +19,7 @@ import type { JobHandler } from './job-handler';
  * 순차 기준 최악치로 계산되어 있다.
  */
 @Injectable()
-export class JobsScheduler {
+export class JobsScheduler implements OnApplicationBootstrap {
   private isRunning = false;
 
   constructor(
@@ -27,6 +27,22 @@ export class JobsScheduler {
     @Inject(JOB_HANDLER) private readonly handler: JobHandler,
     private readonly fileLogger: FileLoggerService,
   ) {}
+
+  /**
+   * 부팅 시 크래시 복구 (ARCHITECTURE.md §7). 단일 프로세스 전제에서 부팅
+   * 시점에 processing인 job은 전부 고아다 — 살아 있는 워커가 있었을 수 없다.
+   * 첫 tick은 부팅 후 폴링 주기(30초)가 지나야 돌므로 복구가 항상 선행된다.
+   */
+  async onApplicationBootstrap(): Promise<void> {
+    const jobIds = await this.repository.recoverOrphanedProcessing();
+    if (jobIds.length > 0) {
+      this.fileLogger.write({
+        event: 'scheduler.recovery',
+        recovered: jobIds.length,
+        jobIds,
+      });
+    }
+  }
 
   @Interval(SCHEDULER_POLL_INTERVAL_MS)
   async tick(): Promise<void> {

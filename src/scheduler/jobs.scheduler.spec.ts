@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AppModule } from '../app.module';
@@ -52,15 +52,20 @@ interface SchedulerContext {
   close(): Promise<void>;
 }
 
-async function createContext(): Promise<SchedulerContext> {
+/** seedJobs를 주면 앱 부팅 전에 DB 파일을 미리 채운다 (부팅 시 복구 검증용). */
+async function createContext(seedJobs: Job[] = []): Promise<SchedulerContext> {
   const tempDir = mkdtempSync(join(tmpdir(), 'scheduler-spec-'));
   const handler = new ControlledHandler();
+  const dbFile = join(tempDir, 'jobs.json');
+  if (seedJobs.length > 0) {
+    writeFileSync(dbFile, JSON.stringify({ jobs: seedJobs }));
+  }
 
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   })
     .overrideProvider(DB_FILE_TOKEN)
-    .useValue(join(tempDir, 'jobs.json'))
+    .useValue(dbFile)
     .overrideProvider(LOG_FILE_TOKEN)
     .useValue(join(tempDir, 'logs.txt'))
     .overrideProvider(JOB_HANDLER)
@@ -220,6 +225,36 @@ describe('JobsScheduler — 처리 결과 logs.txt 기록 (TEST-PLAN §3)', () =
     expect(
       entries.some((e) => e.event === 'scheduler.cycle.summary'),
     ).toBe(true);
+
+    rmSync(join(ctx.logFile, '..'), { recursive: true, force: true });
+  });
+});
+
+describe('JobsScheduler — 부팅 시 크래시 복구 (TEST-PLAN §3)', () => {
+  it('processing 고아 job이 부팅 시 pending으로 복구됨 + 복구 로그 기록', async () => {
+    const orphan = makeJob({
+      id: 'orphan-1',
+      status: JobStatus.PROCESSING,
+      attempts: 1,
+    });
+    const untouched = makeJob({ id: 'done-1', status: JobStatus.COMPLETED });
+    const ctx = await createContext([orphan, untouched]);
+
+    const after = await ctx.repository.findById('orphan-1');
+    expect(after?.status).toBe(JobStatus.PENDING);
+    expect(after?.attempts).toBe(1); // 핸들러 실패가 아니므로 불변
+
+    const done = await ctx.repository.findById('done-1');
+    expect(done?.status).toBe(JobStatus.COMPLETED); // processing 외에는 불변
+
+    await ctx.app.close(); // 스트림 flush
+
+    const entries = readFileSync(ctx.logFile, 'utf8')
+      .split('\n')
+      .filter((line) => line.length > 0)
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    const recovery = entries.find((e) => e.event === 'scheduler.recovery');
+    expect(recovery).toMatchObject({ recovered: 1, jobIds: ['orphan-1'] });
 
     rmSync(join(ctx.logFile, '..'), { recursive: true, force: true });
   });
