@@ -13,7 +13,7 @@
 ### 상태 전이 (전이 표 전수 검증)
 - [ ] 허용 전이 6종 각각 성공: p→pr, pr→c, pr→p(재시도), pr→f, p→cancelled, f→p
 - [ ] 거부 전이 대표 케이스 → ConflictException(409):
-  - [ ] completed → pending (종착 상태 부활 금지)
+  - [ ] completed → pending (최종 상태 부활 금지)
   - [ ] cancelled → pending
   - [ ] pending → completed (처리 건너뛰기 금지)
   - [ ] 사용자의 → processing 직접 전이 (claiming은 워커 전용)
@@ -36,7 +36,7 @@
 
 ### 정상 경로
 - [ ] POST /jobs → 201 + 생성된 job 반환
-- [ ] GET /jobs → 200 + { data, meta } envelope + createdAt 내림차순
+- [ ] GET /jobs → 200 + { data, meta } 구조 + createdAt 내림차순
 - [ ] GET /jobs?page=&limit= 페이지네이션 동작 (total 정확성 포함)
 - [ ] GET /jobs/search?title= → 200 + 필터링 결과
 - [ ] GET /jobs/:id → 200
@@ -74,7 +74,7 @@
 
 ## 4. 동시성 테스트 (최대 리스크 영역 — 통합 테스트)
 
-- [ ] **병렬 생성**: POST 20건 동시 발사 → jobs.json에 정확히 20건 존재 (lost update 없음)
+- [ ] **병렬 생성**: POST 20건 동시 발사 → jobs.json에 정확히 20건 존재 (수정 유실(lost update) 없음)
 - [ ] **병렬 수정**: 서로 다른 job 10건에 동시 PATCH → 모든 수정이 반영됨
 - [ ] **API vs 스케줄러 경합**: 스케줄러가 claiming하는 동안 같은 job에 PATCH →
       한쪽은 성공, 한쪽은 409, 파일은 항상 유효한 JSON (직렬화로 인해 결과가
@@ -86,5 +86,5 @@
 - 다중 프로세스 동시성: 단일 프로세스 전제 (ARCHITECTURE.md §6). 전제가 바뀌면
   테스트보다 아키텍처(저장소 계층)가 먼저 바뀌어야 한다.
 - 부하/성능 테스트: 운영 전제(내부 도구 규모)상 범위 외. 전환 트리거는 ARCHITECTURE.md §10.
-- 확률적 실패의 통계 검증: 운에 의존하는 테스트는 flaky해지므로, 실패 주입
+- 확률적 실패의 통계 검증: 운에 의존하는 테스트는 불안정(flaky)해지므로, 실패 주입
   (fault injection)으로 모든 실패 경로를 결정적으로 검증하는 방식으로 대체.
