@@ -258,6 +258,7 @@ scheduler.recovery 이벤트로 기록한다 (recovered 건수, jobId 목록 포
 | PATCH 검증 위치 (구현 중 결정) | Repository `update(id, mutator)` 콜백 — 검증·쓰기를 한 임계 구역에서 실행 | Service에서 읽기→검증→별도 쓰기: 두 호출 사이에 스케줄러 claiming이 끼어드는 check-then-act 레이스 발생 |
 | 자동 재시도 복귀 시 failReason (구현 중 결정) | 미기록 — 최종 failed에서만 기록 | 매 실패마다 기록: 시도별 사유 이력은 로그 계층(§8) 담당. 상태 파일은 최종 확정 사유만 |
 | 크래시 복구 | startup sweep 채택 | 타임아웃 reaper 기각 — 단일 프로세스에선 복잡도만 증가. 한계: 반복 크래시를 유발하는 job은 무한 재시도됨(poison pill) |
+| 배치 내 처리 방식 | 순차 유지 | Promise.all 동시 처리 검토 후 기각: 완료 지연을 지배하는 건 폴링 주기(30초)라 실익이 없고, 실제 핸들러(외부 API) 연결 시 동시 호출은 rate limit 위험이 있어 순차가 보수적 기본값. 동시 처리가 필요해지면 배치 크기와 분리된 concurrency 설정으로 도입 |
 
 ## 10. 로드맵 (전환 트리거와 순서)
 
