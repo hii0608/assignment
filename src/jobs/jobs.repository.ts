@@ -41,7 +41,9 @@ export class JobsRepository {
   async findAll(page: number, limit: number): Promise<Paginated<Job>> {
     return this.mutex.runExclusive(async () => {
       const jobs = await this.getAllUnsafe();
-      const sorted = jobs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      const sorted = jobs.sort((a, b) =>
+        b.createdAt.localeCompare(a.createdAt),
+      );
       return this.paginate(sorted, page, limit);
     });
   }
@@ -88,10 +90,7 @@ export class JobsRepository {
    * mutator가 던진 예외(예: 전이 위반 409)는 쓰기 없이 그대로 전파된다.
    * 존재하지 않는 id면 null.
    */
-  async update(
-    id: string,
-    mutator: (job: Job) => Job,
-  ): Promise<Job | null> {
+  async update(id: string, mutator: (job: Job) => Job): Promise<Job | null> {
     return this.mutex.runExclusive(async () => {
       const jobs = await this.getAllUnsafe();
       const index = jobs.findIndex((job) => job.id === id);

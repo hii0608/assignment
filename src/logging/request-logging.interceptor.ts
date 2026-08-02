@@ -46,7 +46,7 @@ export class RequestLoggingInterceptor implements NestInterceptor {
         const statusCode =
           error instanceof HttpException
             ? error.getStatus()
-            : (HttpStatus.INTERNAL_SERVER_ERROR as number);
+            : HttpStatus.INTERNAL_SERVER_ERROR;
         this.fileLogger.write({
           ...base,
           statusCode,

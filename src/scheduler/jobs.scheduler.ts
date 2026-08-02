@@ -57,9 +57,8 @@ export class JobsScheduler implements OnApplicationBootstrap {
     this.isRunning = true;
     const startedAt = Date.now();
     try {
-      const claimed = await this.repository.claimPendingBatch(
-        SCHEDULER_BATCH_SIZE,
-      );
+      const claimed =
+        await this.repository.claimPendingBatch(SCHEDULER_BATCH_SIZE);
       this.fileLogger.write({
         event: 'scheduler.cycle.start',
         claimed: claimed.length,

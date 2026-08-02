@@ -68,7 +68,7 @@
 - [ ] 실패 시 attempts+1 후 pending 복귀 (attempts < max)
 - [ ] 3회째 실패 시 failed + failReason 기록
 - [ ] 배치 크기 준수: pending 10건일 때 한 주기에 5건만 처리
-- [ ] 오래된 순으로 집어감 (FIFO)
+- [ ] 오래된 순으로 가져감 (FIFO)
 - [ ] overlap 가드: isRunning=true 상태에서 주기 진입 시 스킵 + 스킵 로그
 - [ ] 처리 결과가 logs.txt에 기록됨 (jobId, title, 결과)
 - [ ] 부팅 시 크래시 복구 (startup sweep): processing 고아 job이 있는 상태로

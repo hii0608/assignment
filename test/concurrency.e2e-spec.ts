@@ -1,8 +1,10 @@
 import request from 'supertest';
 import { readFileSync } from 'node:fs';
+import { Server } from 'node:http';
 import { Job } from '../src/jobs/entities/job.entity';
 import { JobHandler } from '../src/scheduler/job-handler';
 import { JobsScheduler } from '../src/scheduler/jobs.scheduler';
+import { ListResponse } from './api-types';
 import { createTestApp, TestApp } from './test-app';
 
 /** 지연 없이 항상 성공하는 핸들러 — 경합 시나리오의 결정성 확보용. */
@@ -48,18 +50,21 @@ describe('동시성 — 병렬 API 요청 (TEST-PLAN §4)', () => {
   });
 
   function http() {
-    return request(ctx.app.getHttpServer());
+    return request(ctx.app.getHttpServer() as Server);
   }
 
   it('병렬 생성: POST 20건 동시 발사 → 정확히 20건 존재 (lost update 없음)', async () => {
     await Promise.all(
       Array.from({ length: 20 }, (_, i) =>
-        http().post('/jobs').send({ title: `동시 생성 ${i}` }).expect(201),
+        http()
+          .post('/jobs')
+          .send({ title: `동시 생성 ${i}` })
+          .expect(201),
       ),
     );
 
     const res = await http().get('/jobs?limit=100').expect(200);
-    expect(res.body.meta.total).toBe(20);
+    expect((res.body as ListResponse).meta.total).toBe(20);
 
     const jobs = assertDbFileValid(ctx.dbFile);
     expect(jobs).toHaveLength(20);
@@ -72,7 +77,7 @@ describe('동시성 — 병렬 API 요청 (TEST-PLAN §4)', () => {
         .post('/jobs')
         .send({ title: `수정 대상 ${i}` })
         .expect(201);
-      created.push(res.body.id as string);
+      created.push((res.body as Job).id);
     }
 
     await Promise.all(
@@ -86,7 +91,7 @@ describe('동시성 — 병렬 API 요청 (TEST-PLAN §4)', () => {
 
     const res = await http().get('/jobs?limit=100').expect(200);
     const titles = new Set(
-      (res.body.data as Job[]).map((job) => job.title),
+      (res.body as ListResponse).data.map((job) => job.title),
     );
     for (let i = 0; i < 10; i += 1) {
       expect(titles.has(`동시 수정 완료 ${i}`)).toBe(true);
@@ -113,7 +118,7 @@ describe('동시성 — API vs 스케줄러 경합 (TEST-PLAN §4)', () => {
   });
 
   function http() {
-    return request(ctx.app.getHttpServer());
+    return request(ctx.app.getHttpServer() as Server);
   }
 
   it('claiming 중 같은 job에 PATCH → 한쪽 성공, 한쪽 409, 두 시나리오로 수렴', async () => {
@@ -121,7 +126,7 @@ describe('동시성 — API vs 스케줄러 경합 (TEST-PLAN §4)', () => {
       .post('/jobs')
       .send({ title: '경합 대상' })
       .expect(201);
-    const id = created.body.id as string;
+    const id = (created.body as Job).id;
 
     const scheduler = ctx.app.get(JobsScheduler);
     const [, patchRes] = await Promise.all([
@@ -130,15 +135,16 @@ describe('동시성 — API vs 스케줄러 경합 (TEST-PLAN §4)', () => {
     ]);
 
     // 뮤텍스 직렬화로 인해 결과는 정확히 두 시나리오 중 하나:
-    // (a) PATCH 선행 → 200, job은 cancelled로 종결 (스케줄러는 집을 게 없음)
+    // (a) PATCH 선행 → 200, job은 cancelled로 종결 (스케줄러는 가져갈 게 없음)
     // (b) claiming 선행 → PATCH는 409, job은 처리되어 completed
     expect([200, 409]).toContain(patchRes.status);
 
     const final = await http().get(`/jobs/${id}`).expect(200);
+    const finalBody = final.body as Job;
     if (patchRes.status === 200) {
-      expect(final.body.status).toBe('cancelled');
+      expect(finalBody.status).toBe('cancelled');
     } else {
-      expect(final.body.status).toBe('completed');
+      expect(finalBody.status).toBe('completed');
     }
   });
 

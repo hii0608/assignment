@@ -20,27 +20,24 @@ class InMemoryJobsRepository {
     return this.jobs.get(id);
   }
 
-  async create(job: Job): Promise<Job> {
+  create(job: Job): Promise<Job> {
     this.jobs.set(job.id, structuredClone(job));
-    return structuredClone(job);
+    return Promise.resolve(structuredClone(job));
   }
 
-  async findById(id: string): Promise<Job | null> {
+  findById(id: string): Promise<Job | null> {
     const job = this.jobs.get(id);
-    return job ? structuredClone(job) : null;
+    return Promise.resolve(job ? structuredClone(job) : null);
   }
 
-  async update(
-    id: string,
-    mutator: (job: Job) => Job,
-  ): Promise<Job | null> {
+  update(id: string, mutator: (job: Job) => Job): Promise<Job | null> {
     const job = this.jobs.get(id);
     if (!job) {
-      return null;
+      return Promise.resolve(null);
     }
     const mutated = mutator(structuredClone(job));
     this.jobs.set(id, structuredClone(mutated));
-    return structuredClone(mutated);
+    return Promise.resolve(structuredClone(mutated));
   }
 }
 
@@ -154,9 +151,9 @@ describe('JobsService', () => {
       [JobStatus.PROCESSING, JobStatus.CANCELLED],
     ])('거부 전이 %s → %s 요청 → ConflictException', async (from, to) => {
       repository.seed(makeJob({ status: from }));
-      await expect(
-        service.update('test-id', { status: to }),
-      ).rejects.toThrow(ConflictException);
+      await expect(service.update('test-id', { status: to })).rejects.toThrow(
+        ConflictException,
+      );
       expect(repository.get('test-id')?.status).toBe(from);
     });
   });
@@ -210,9 +207,9 @@ describe('JobsService', () => {
     });
 
     it('존재하지 않는 id 수정 → NotFoundException', async () => {
-      await expect(
-        service.update('없는-id', { title: 'x' }),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.update('없는-id', { title: 'x' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

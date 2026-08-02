@@ -21,7 +21,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    let statusCode = HttpStatus.INTERNAL_SERVER_ERROR as number;
+    let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
     let error = 'Internal Server Error';
     let message: string | string[] = '서버 내부 오류';
 

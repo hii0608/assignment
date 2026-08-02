@@ -19,10 +19,11 @@ import { JobsScheduler } from './jobs.scheduler';
 class ControlledHandler implements JobHandler {
   shouldFail: (job: Job) => boolean = () => false;
 
-  async handle(job: Job): Promise<void> {
+  handle(job: Job): Promise<void> {
     if (this.shouldFail(job)) {
-      throw new Error(`주입된 실패: ${job.title}`);
+      return Promise.reject(new Error(`주입된 실패: ${job.title}`));
     }
+    return Promise.resolve();
   }
 }
 
@@ -153,15 +154,13 @@ describe('JobsScheduler (TEST-PLAN §3)', () => {
     await ctx.scheduler.tick();
 
     const all = await ctx.repository.findAll(1, 100);
-    const completed = all.data.filter(
-      (j) => j.status === JobStatus.COMPLETED,
-    );
+    const completed = all.data.filter((j) => j.status === JobStatus.COMPLETED);
     const pending = all.data.filter((j) => j.status === JobStatus.PENDING);
     expect(completed).toHaveLength(5);
     expect(pending).toHaveLength(5);
   });
 
-  it('오래된 순으로 집어감 (FIFO)', async () => {
+  it('오래된 순으로 가져감 (FIFO)', async () => {
     const jobs: Job[] = [];
     for (let i = 0; i < 8; i += 1) {
       jobs.push(
@@ -222,9 +221,9 @@ describe('JobsScheduler — 처리 결과 logs.txt 기록 (TEST-PLAN §3)', () =
       title: '로그 대상',
       result: 'completed',
     });
-    expect(
-      entries.some((e) => e.event === 'scheduler.cycle.summary'),
-    ).toBe(true);
+    expect(entries.some((e) => e.event === 'scheduler.cycle.summary')).toBe(
+      true,
+    );
 
     rmSync(join(ctx.logFile, '..'), { recursive: true, force: true });
   });
